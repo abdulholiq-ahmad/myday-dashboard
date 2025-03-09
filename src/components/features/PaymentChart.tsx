@@ -1,5 +1,3 @@
-"use client";
-
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
 
 interface PaymentStatusData {
@@ -40,7 +38,7 @@ export default function PaymentChart({ data }: PaymentChartProps) {
             dataKey="value"
             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
           >
-            {chartData.map((entry, index) => (
+            {chartData.map((index: any) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
