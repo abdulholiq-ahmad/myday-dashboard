@@ -11,22 +11,20 @@ import StudentService from "../services/students.service";
 import { ErrorDisplay } from "../components/ui/error-display";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { Pagination } from "../components/ui/pagination";
-import { Student } from "../types";
 import LoadingSpinner from "../components/features/loading";
 
 export default function ClientsPage() {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
   const pageSize = 10;
 
-  // Talabalar ma'lumotlarini olish
   const fetchStudents = async () => {
     try {
       setLoading(true);
@@ -42,7 +40,7 @@ export default function ClientsPage() {
 
       setStudents(response.results);
       setTotalPages(Math.ceil(response.count / pageSize));
-    } catch (err: any) {
+    } catch (err) {
       console.error("Students fetch error:", err);
       setError(err.response?.data?.detail || "Talabalarni yuklashda xatolik yuz berdi");
     } finally {
@@ -61,7 +59,7 @@ export default function ClientsPage() {
     setSelectedStudentId(null);
   };
 
-  const toggleStudentSelection = (id: string) => {
+  const toggleStudentSelection = (id) => {
     setSelectedStudents((prev) => (prev.includes(id) ? prev.filter((studentId) => studentId !== id) : [...prev, id]));
   };
 
@@ -73,12 +71,12 @@ export default function ClientsPage() {
     }
   };
 
-  const handleEditStudent = (studentId: number) => {
+  const handleEditStudent = (studentId) => {
     setSelectedStudentId(studentId);
     setIsDialogOpen(true);
   };
 
-  const handleDeleteStudent = async (studentId: number) => {
+  const handleDeleteStudent = async (studentId) => {
     if (window.confirm("Haqiqatan ham bu talabani o'chirmoqchimisiz?")) {
       try {
         await StudentService.deleteStudent(studentId.toString());
@@ -90,7 +88,7 @@ export default function ClientsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status) => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-500">Active</Badge>;
