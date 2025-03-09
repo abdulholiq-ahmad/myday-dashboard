@@ -1,7 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { FinancialData } from "../../types";
 
-const data: FinancialData[] = [
+const dataList: FinancialData[] = [
   { name: "JAN", value: 30000000 },
   { name: "FEB", value: 45000000 },
   { name: "MAR", value: 40000000 },
@@ -27,7 +27,7 @@ function FinancialChart() {
   return (
     <div className="h-96">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
+        <BarChart data={dataList} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="name" />
           <YAxis tickFormatter={formatYAxis} domain={[0, 60000000]} ticks={[0, 10000000, 20000000, 30000000, 40000000, 50000000, 60000000]} />

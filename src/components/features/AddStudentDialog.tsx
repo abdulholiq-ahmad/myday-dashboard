@@ -82,7 +82,7 @@ function AddStudentDialog({ open, onOpenChange }: AddStudentDialogProps) {
               <Label htmlFor="birthday">
                 Birthday<span className="text-red-500">*</span>
               </Label>
-              <Select onVolumeChange={(value) => handleSelectChange("birthday", value)} value={formData.birthday}>
+              <Select onVolumeChange={(value: any) => handleSelectChange("birthday", value)} value={formData.birthday}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

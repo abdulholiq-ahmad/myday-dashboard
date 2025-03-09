@@ -119,7 +119,7 @@ function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
                   <Label htmlFor="subject">
                     Select subject<span className="text-red-500">*</span>
                   </Label>
-                  <Select onVolumeChange={(value) => handleSelectChange("subject", value)} value={formData.subject}>
+                  <Select onVolumeChange={(value: any) => handleSelectChange("subject", value)} value={formData.subject}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -140,7 +140,7 @@ function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="lessonType">Select lesson type</Label>
-                    <Select onVolumeChange={(value) => handleSelectChange("lessonType", value)} value={formData.lessonType}>
+                    <Select onVolumeChange={(value: any) => handleSelectChange("lessonType", value)} value={formData.lessonType}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -153,7 +153,7 @@ function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="teacher">Select teacher</Label>
-                    <Select onVolumeChange={(value) => handleSelectChange("teacher", value)} value={formData.teacher}>
+                    <Select onVolumeChange={(value: any) => handleSelectChange("teacher", value)} value={formData.teacher}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -166,7 +166,7 @@ function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="lessonTime">Select lesson time</Label>
-                    <Select onVolumeChange={(value) => handleSelectChange("lessonTime", value)} value={formData.lessonTime}>
+                    <Select onVolumeChange={(value: any) => handleSelectChange("lessonTime", value)} value={formData.lessonTime}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -179,7 +179,7 @@ function AddLeadDialog({ open, onOpenChange }: AddLeadDialogProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="leadSource">Select lead source</Label>
-                    <Select onChange={(value) => handleSelectChange("leadSource", value)} value={formData.leadSource}>
+                    <Select onChange={(value: any) => handleSelectChange("leadSource", value)} value={formData.leadSource}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

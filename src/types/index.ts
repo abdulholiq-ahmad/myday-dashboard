@@ -1,4 +1,9 @@
 export interface Student {
+  group_id: any;
+  birthday: string;
+  phone_number: string;
+  first_name: string;
+  last_name: string;
   id: string;
   name: string;
   age: string;

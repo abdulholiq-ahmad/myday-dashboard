@@ -1,12 +1,51 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Clock, Users } from "lucide-react";
-import { Lesson } from "../../services/dashboard.service";
 
-interface LessonTableProps {
-  lessons: Lesson[];
-}
+// Mock data for lessons
+const lessonData = [
+  {
+    id: 1,
+    time: "09:00 - 10:00",
+    name: "Group 52",
+    teacher: "Mr. Johnson",
+    subject: "General English: Indermatade level",
+    type: "Group",
+    room: "Room 2-3",
+    students: 18,
+  },
+  {
+    id: 2,
+    time: "09:00 - 10:00",
+    name: "Steve Hoover",
+    teacher: "Mr. Johnson",
+    subject: "General English: Indermatade level",
+    type: "Individual",
+    room: "Room 2-3",
+    students: 1,
+  },
+  {
+    id: 3,
+    time: "09:00 - 10:00",
+    name: "Group 52",
+    teacher: "Mr. Johnson",
+    subject: "General English: Indermatade level",
+    type: "Group",
+    room: "Room 2-3",
+    students: 18,
+  },
+  {
+    id: 4,
+    time: "09:00 - 10:00",
+    name: "Steve Hoover",
+    teacher: "Mr. Johnson",
+    subject: "General English: Indermatade level",
+    type: "Individual",
+    room: "Room 2-3",
+    students: 1,
+  },
+];
 
-export default function LessonTable({ lessons }: LessonTableProps) {
+export default function LessonTable() {
   return (
     <Table>
       <TableHeader>
@@ -22,9 +61,9 @@ export default function LessonTable({ lessons }: LessonTableProps) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {lessons.map((lesson, index) => (
-          <TableRow key={lesson.id} className={index === 3 ? "bg-blue-50 border-l-4 border-blue-500" : ""}>
-            <TableCell className="font-medium">1/{index + 1}</TableCell>
+        {lessonData.map((lesson, index) => (
+          <TableRow key={index} className={index === 3 ? "bg-blue-50 border-l-4 border-blue-500" : ""}>
+            <TableCell className="font-medium">1/8</TableCell>
             <TableCell>
               <div className="flex items-center text-red-500">
                 <Clock className="h-4 w-4 mr-1" />

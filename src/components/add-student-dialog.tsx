@@ -1,380 +1,371 @@
 "use client";
 
 import type React from "react";
-
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { CheckCircle2 } from "lucide-react";
-import { ErrorDisplay } from "../components/ui/error-display";
+import { X } from "lucide-react";
+import StudentService from "../services/students.service";
 import LoadingSpinner from "./features/loading";
+
+interface StudentFormData {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  birthYear: string;
+  birthMonth: string;
+  birthDay: string;
+  actionType: string;
+  groupId?: string;
+  [key: string]: any;
+}
 
 interface AddStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: (data: any) => void;
+  studentId?: number | null; // If provided, we're in update mode
+  initialData?: any | null;
 }
 
-export function AddStudentDialog({ open, onOpenChange, onSuccess }: AddStudentDialogProps) {
-  const [step, setStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+export function AddStudentDialog({ open, onOpenChange, onSuccess, studentId = null, initialData = null }: AddStudentDialogProps) {
+  const [formData, setFormData] = useState<StudentFormData>({
     firstName: "",
     lastName: "",
     phoneNumber: "+998",
-    birthday: "",
-    email: "",
-    gender: "male",
+    birthYear: "",
+    birthMonth: "",
+    birthDay: "",
     actionType: "individual", // individual or group
-    course: "",
-    level: "",
-    groupId: "",
-    paymentStatus: "unpaid",
-    notes: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const isUpdateMode = !!studentId;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Parse date string to year, month, day
+  const parseDateString = (dateString: string | null | undefined) => {
+    if (!dateString) return { year: "", month: "", day: "" };
 
-    // Clear error for this field when user types
-    if (formErrors[name]) {
-      setFormErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return { year: "", month: "", day: "" };
+
+      return {
+        year: date.getFullYear().toString(),
+        month: (date.getMonth() + 1).toString().padStart(2, "0"),
+        day: date.getDate().toString().padStart(2, "0"),
+      };
+    } catch (e) {
+      return { year: "", month: "", day: "" };
+    }
+  };
+
+  // Fetch student data if in update mode
+  useEffect(() => {
+    if (open && isUpdateMode && studentId && !initialData) {
+      const fetchStudentData = async () => {
+        try {
+          setFetchingData(true);
+          const studentData = await StudentService.getStudent(studentId.toString());
+
+          const { year, month, day } = parseDateString(studentData.birthday);
+
+          setFormData({
+            firstName: studentData.first_name || "",
+            lastName: studentData.last_name || "",
+            phoneNumber: studentData.phone_number || "+998",
+            birthYear: year,
+            birthMonth: month,
+            birthDay: day,
+            actionType: studentData.group_id ? "group" : "individual",
+            groupId: studentData.group_id?.toString() || "",
+          });
+        } catch (err) {
+          console.error("Error fetching student data:", err);
+          setError("Talaba ma'lumotlarini yuklashda xatolik yuz berdi");
+        } finally {
+          setFetchingData(false);
+        }
+      };
+
+      fetchStudentData();
+    } else if (initialData) {
+      // Use provided initial data if available
+      const { year, month, day } = parseDateString(initialData.birthday);
+
+      setFormData({
+        ...initialData,
+        birthYear: year,
+        birthMonth: month,
+        birthDay: day,
       });
     }
+  }, [open, studentId, isUpdateMode, initialData]);
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setError(null);
+      if (!isUpdateMode) {
+        setFormData({
+          firstName: "",
+          lastName: "",
+          phoneNumber: "+998",
+          birthYear: "",
+          birthMonth: "",
+          birthDay: "",
+          actionType: "individual",
+        });
+      }
+    }
+  }, [open, isUpdateMode]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear error for this field when user selects
-    if (formErrors[name]) {
-      setFormErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
   };
 
   const handleRadioChange = (value: string) => {
     setFormData((prev) => ({ ...prev, actionType: value }));
   };
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-
-    if (!formData.firstName.trim()) {
-      errors.firstName = "Ism kiritilishi shart";
-    }
-
-    if (!formData.lastName.trim()) {
-      errors.lastName = "Familiya kiritilishi shart";
-    }
-
-    if (!formData.phoneNumber.trim() || formData.phoneNumber === "+998") {
-      errors.phoneNumber = "Telefon raqam kiritilishi shart";
-    } else if (!/^\+998\d{9}$/.test(formData.phoneNumber)) {
-      errors.phoneNumber = "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak";
-    }
-
-    if (!formData.birthday) {
-      errors.birthday = "Tug'ilgan sana tanlanishi kerak";
-    }
-
-    if (formData.actionType === "group" && !formData.groupId) {
-      errors.groupId = "Guruh tanlanishi kerak";
-    }
-
-    if (!formData.course) {
-      errors.course = "Kurs tanlanishi kerak";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  // Format date as YYYY-MM-DD
+  const formatBirthday = () => {
+    if (!formData.birthYear || !formData.birthMonth || !formData.birthDay) return "";
+    return `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`;
   };
 
   const handleSubmit = async () => {
-    // Validate form
-    if (!validateForm()) {
-      return;
-    }
-
-    if (step === 1) {
-      setStep(2);
-      return;
-    }
-
     try {
-      setIsSubmitting(true);
+      setLoading(true);
       setError(null);
 
-      // API call simulation
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Success - move to success step
-      setStep(3);
-
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess(formData);
+      // Validate form
+      if (!formData.firstName.trim()) {
+        setError("Ism kiritilishi shart");
+        return;
+      }
+      if (!formData.lastName.trim()) {
+        setError("Familiya kiritilishi shart");
+        return;
+      }
+      if (!formData.phoneNumber.trim() || formData.phoneNumber === "+998") {
+        setError("Telefon raqam kiritilishi shart");
+        return;
+      }
+      if (!formData.birthYear || !formData.birthMonth || !formData.birthDay) {
+        setError("Tug'ilgan sana to'liq tanlanishi kerak");
+        return;
       }
 
-      // Auto close after success
-      setTimeout(() => {
-        onOpenChange(false);
-        // Reset form after dialog is closed
-        setTimeout(() => {
-          setStep(1);
-          setFormData({
-            firstName: "",
-            lastName: "",
-            phoneNumber: "+998",
-            birthday: "",
-            email: "",
-            gender: "male",
-            actionType: "individual",
-            course: "",
-            level: "",
-            groupId: "",
-            paymentStatus: "unpaid",
-            notes: "",
-          });
-        }, 300);
-      }, 2000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Talaba qo'shishda xatolik yuz berdi");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      // Prepare data for API
+      const birthday = formatBirthday();
 
-  const handleCancel = () => {
-    if (step === 2) {
-      setStep(1);
-    } else {
+      const studentData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone_number: formData.phoneNumber,
+        birthday: birthday,
+        group_id: formData.actionType === "group" ? formData.groupId : null,
+      };
+
+      let result;
+      if (isUpdateMode && studentId) {
+        // Update existing student
+        result = await StudentService.updateStudent(studentId.toString(), studentData);
+      } else {
+        // Create new student
+        result = await StudentService.createStudent(studentData);
+      }
+
+      // Close dialog and call success callback
       onOpenChange(false);
-      // Reset form after dialog is closed
-      setTimeout(() => {
-        setStep(1);
-        setFormData({
-          firstName: "",
-          lastName: "",
-          phoneNumber: "+998",
-          birthday: "",
-          email: "",
-          gender: "male",
-          actionType: "individual",
-          course: "",
-          level: "",
-          groupId: "",
-          paymentStatus: "unpaid",
-          notes: "",
-        });
-      }, 300);
+      if (onSuccess) {
+        onSuccess(result);
+      }
+    } catch (err: any) {
+      console.error("Error saving student:", err);
+      setError(err.response?.data?.detail || "Talaba ma'lumotlarini saqlashda xatolik yuz berdi");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Available courses
-  const courses = [
-    { id: "general-english", name: "General English" },
-    { id: "ielts", name: "IELTS Preparation" },
-    { id: "business", name: "Business English" },
-    { id: "kids", name: "English for Kids" },
-  ];
+  // Generate years from 1950 to current year
+  const years = Array.from({ length: new Date().getFullYear() - 1950 + 1 }, (_, i) => (1950 + i).toString()).reverse();
 
-  // Available levels
-  const levels = [
-    { id: "beginner", name: "Beginner" },
-    { id: "elementary", name: "Elementary" },
-    { id: "pre-intermediate", name: "Pre-Intermediate" },
-    { id: "intermediate", name: "Intermediate" },
-    { id: "upper-intermediate", name: "Upper-Intermediate" },
-    { id: "advanced", name: "Advanced" },
-  ];
+  // Generate months 1-12
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const month = (i + 1).toString().padStart(2, "0");
+    return { value: month, label: month };
+  });
 
-  // Available groups
+  // Generate days 1-31
+  const days = Array.from({ length: 31 }, (_, i) => {
+    const day = (i + 1).toString().padStart(2, "0");
+    return { value: day, label: day };
+  });
+
+  // Available groups (for demo)
   const groups = [
-    { id: "group-45", name: "Group 45 (General English)" },
-    { id: "group-46", name: "Group 46 (IELTS)" },
-    { id: "group-47", name: "Group 47 (Business English)" },
-  ];
-
-  // Available birthdays (for demo)
-  const birthdays = [
-    { id: "1990-01-01", name: "01.01.1990" },
-    { id: "1995-05-15", name: "15.05.1995" },
-    { id: "2000-10-20", name: "20.10.2000" },
-    { id: "2005-03-25", name: "25.03.2005" },
+    { id: "1", name: "Group 45 (General English)" },
+    { id: "2", name: "Group 46 (IELTS)" },
+    { id: "3", name: "Group 47 (Business English)" },
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        {step === 1 && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Yangi talaba qo'shish</DialogTitle>
-              <DialogDescription>Yangi talaba ma'lumotlarini kiriting</DialogDescription>
-            </DialogHeader>
+    <Dialog className="bg-white" open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] p-0 gap-0">
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-2xl font-semibold text-[#2F3C7E]">{isUpdateMode ? "Update Student" : "Add new Student"}</DialogTitle>
+              <DialogDescription className="text-base text-gray-500 mt-1">
+                {isUpdateMode ? "Update student information" : "Add or move selected students to a new group"}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
 
-            {error && <ErrorDisplay message={error} onDismiss={() => setError(null)} />}
+        {fetchingData ? (
+          <div className="p-12 flex items-center justify-center">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className="p-6 pt-4">
+            {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
 
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className={formErrors.firstName ? "text-red-500" : ""}>
-                    Ism<span className="text-red-500">*</span>
+                  <Label htmlFor="firstName" className="text-[#2F3C7E] text-sm font-medium">
+                    First name<span className="text-red-500 ml-0.5">*</span>
                   </Label>
                   <Input
                     id="firstName"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    className={formErrors.firstName ? "border-red-500" : ""}
+                    className="rounded-lg border-gray-200"
+                    placeholder="John"
                   />
-                  {formErrors.firstName && <p className="text-red-500 text-xs">{formErrors.firstName}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className={formErrors.lastName ? "text-red-500" : ""}>
-                    Familiya<span className="text-red-500">*</span>
+                  <Label htmlFor="lastName" className="text-[#2F3C7E] text-sm font-medium">
+                    Last name<span className="text-red-500 ml-0.5">*</span>
                   </Label>
                   <Input
                     id="lastName"
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    className={formErrors.lastName ? "border-red-500" : ""}
+                    className="rounded-lg border-gray-200"
+                    placeholder="Anderson"
                   />
-                  {formErrors.lastName && <p className="text-red-500 text-xs">{formErrors.lastName}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber" className={formErrors.phoneNumber ? "text-red-500" : ""}>
-                    Telefon raqam<span className="text-red-500">*</span>
+                  <Label htmlFor="phoneNumber" className="text-[#2F3C7E] text-sm font-medium">
+                    Phone number<span className="text-red-500 ml-0.5">*</span>
                   </Label>
                   <Input
                     id="phoneNumber"
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleChange}
-                    placeholder="+998XXXXXXXXX"
-                    className={formErrors.phoneNumber ? "border-red-500" : ""}
+                    className="rounded-lg border-gray-200"
+                    placeholder="+998"
                   />
-                  {formErrors.phoneNumber && <p className="text-red-500 text-xs">{formErrors.phoneNumber}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="birthday" className={formErrors.birthday ? "text-red-500" : ""}>
-                    Tug'ilgan sana<span className="text-red-500">*</span>
+                  <Label className="text-[#2F3C7E] text-sm font-medium">
+                    Birthday<span className="text-red-500 ml-0.5">*</span>
                   </Label>
-                  <Select value={formData.birthday}>
-                    <SelectTrigger className={formErrors.birthday ? "border-red-500" : ""}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {birthdays.map((birthday) => (
-                        <SelectItem key={birthday.id} value={birthday.id}>
-                          {birthday.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {formErrors.birthday && <p className="text-red-500 text-xs">{formErrors.birthday}</p>}
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Year selector */}
+                    <Select onVolumeChange={(value: any) => handleSelectChange("birthYear", value)} value={formData.birthYear}>
+                      <SelectTrigger className="rounded-lg border-gray-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {years.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Month selector */}
+                    <Select onVolumeChange={(value: any) => handleSelectChange("birthMonth", value)} value={formData.birthMonth}>
+                      <SelectTrigger className="rounded-lg border-gray-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {months.map((month) => (
+                          <SelectItem key={month.value} value={month.value}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Day selector */}
+                    <Select onVolumeChange={(value: any) => handleSelectChange("birthDay", value)} value={formData.birthDay}>
+                      <SelectTrigger className="rounded-lg border-gray-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {days.map((day) => (
+                          <SelectItem key={day.value} value={day.value}>
+                            {day.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="example@mail.com" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Jinsi</Label>
-                  <Select value={formData.gender}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Erkak</SelectItem>
-                      <SelectItem value="female">Ayol</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="course" className={formErrors.course ? "text-red-500" : ""}>
-                  Kurs<span className="text-red-500">*</span>
-                </Label>
-                <Select value={formData.course}>
-                  <SelectTrigger className={formErrors.course ? "border-red-500" : ""}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formErrors.course && <p className="text-red-500 text-xs">{formErrors.course}</p>}
-              </div>
-
-              {formData.course && (
-                <div className="space-y-2">
-                  <Label htmlFor="level">Daraja</Label>
-                  <Select value={formData.level}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {levels.map((level) => (
-                        <SelectItem key={level.id} value={level.id}>
-                          {level.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Dars turi</Label>
-                <RadioGroup value={formData.actionType} onValueChange={handleRadioChange} className="flex space-x-8">
+              <div className="space-y-3">
+                <Label className="text-[#2F3C7E] text-sm font-medium">Select type of action</Label>
+                <RadioGroup value={formData.actionType} onValueChange={handleRadioChange} className="flex space-x-12">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="individual" id="individual" />
-                    <Label htmlFor="individual">Individual</Label>
+                    <Label htmlFor="individual" className="font-normal">
+                      Individual
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="group" id="group" />
-                    <Label htmlFor="group">Guruh</Label>
+                    <Label htmlFor="group" className="font-normal">
+                      Add group
+                    </Label>
                   </div>
                 </RadioGroup>
               </div>
 
               {formData.actionType === "group" && (
                 <div className="space-y-2">
-                  <Label htmlFor="groupId" className={formErrors.groupId ? "text-red-500" : ""}>
-                    Guruh<span className="text-red-500">*</span>
+                  <Label htmlFor="groupId" className="text-[#2F3C7E] text-sm font-medium">
+                    Group<span className="text-red-500 ml-0.5">*</span>
                   </Label>
-                  <Select value={formData.groupId}>
-                    <SelectTrigger className={formErrors.groupId ? "border-red-500" : ""}>
+                  <Select onVolumeChange={(value: any) => handleSelectChange("groupId", value)} value={formData.groupId || ""}>
+                    <SelectTrigger className="rounded-lg border-gray-200">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -385,131 +376,32 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess }: AddStudentDi
                       ))}
                     </SelectContent>
                   </Select>
-                  {formErrors.groupId && <p className="text-red-500 text-xs">{formErrors.groupId}</p>}
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="paymentStatus">To'lov holati</Label>
-                <Select value={formData.paymentStatus}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="paid">To'langan</SelectItem>
-                    <SelectItem value="partial">Qisman to'langan</SelectItem>
-                    <SelectItem value="unpaid">To'lanmagan</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Qo'shimcha ma'lumot</Label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  placeholder="Qo'shimcha ma'lumotlar..."
-                  className="w-full min-h-[80px] p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="rounded-lg px-8 text-gray-600 border-gray-200"
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit} className="rounded-lg px-8 bg-[#2F3C7E] hover:bg-[#2F3C7E]/90" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <LoadingSpinner />
+                      {isUpdateMode ? "Updating..." : "Creating..."}
+                    </>
+                  ) : isUpdateMode ? (
+                    "Update"
+                  ) : (
+                    "Next"
+                  )}
+                </Button>
               </div>
             </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancel}>
-                Bekor qilish
-              </Button>
-              <Button onClick={handleSubmit}>Keyingi</Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <DialogHeader>
-              <DialogTitle>Ma'lumotlarni tasdiqlash</DialogTitle>
-              <DialogDescription>Quyidagi ma'lumotlar to'g'riligini tasdiqlang</DialogDescription>
-            </DialogHeader>
-
-            <div className="py-4">
-              <div className="bg-gray-50 p-4 rounded-md space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-sm text-gray-500">Ism:</p>
-                    <p className="font-medium">{formData.firstName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Familiya:</p>
-                    <p className="font-medium">{formData.lastName}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-sm text-gray-500">Telefon:</p>
-                    <p className="font-medium">{formData.phoneNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Tug'ilgan sana:</p>
-                    <p className="font-medium">{birthdays.find((b) => b.id === formData.birthday)?.name || formData.birthday}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500">Kurs:</p>
-                  <p className="font-medium">
-                    {courses.find((c) => c.id === formData.course)?.name || formData.course}
-                    {formData.level && ` (${levels.find((l) => l.id === formData.level)?.name || formData.level})`}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500">Dars turi:</p>
-                  <p className="font-medium">
-                    {formData.actionType === "individual" ? "Individual" : "Guruh"}
-                    {formData.actionType === "group" &&
-                      formData.groupId &&
-                      ` - ${groups.find((g) => g.id === formData.groupId)?.name || formData.groupId}`}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500">To'lov holati:</p>
-                  <p className="font-medium">
-                    {formData.paymentStatus === "paid" ? "To'langan" : formData.paymentStatus === "partial" ? "Qisman to'langan" : "To'lanmagan"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-                Orqaga
-              </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <LoadingSpinner />
-                    Saqlanmoqda...
-                  </>
-                ) : (
-                  "Saqlash"
-                )}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {step === 3 && (
-          <div className="py-6 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-4">
-              <CheckCircle2 className="h-6 w-6 text-white" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Talaba muvaffaqiyatli qo'shildi</h2>
-            <p className="text-gray-500">
-              {formData.firstName} {formData.lastName} ma'lumotlari tizimga saqlandi
-            </p>
           </div>
         )}
       </DialogContent>
