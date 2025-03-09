@@ -2,7 +2,6 @@ import { Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
-import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
 import Groups from "./pages/Groups";
 import Courses from "./pages/Courses";
@@ -25,7 +24,6 @@ function App() {
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="leads" element={<Leads />} />
-          <Route path="clients" element={<Clients />} />
           <Route path="groups" element={<Groups />} />
           <Route path="courses" element={<Courses />} />
           <Route path="personnel" element={<Personnel />} />

@@ -67,7 +67,6 @@ leadData.contacted[1] = {
 
 function Leads() {
   const [activeTab, setActiveTab] = useState<"leads" | "applications">("leads");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -97,7 +96,7 @@ function Leads() {
             <Button variant="outline" className="flex items-center gap-2">
               Close filters
             </Button>
-            <Button onClick={() => setIsDialogOpen(true)}>New lead</Button>
+            <Button>New lead</Button>
           </div>
         </div>
 
