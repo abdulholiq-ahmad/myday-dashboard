@@ -5,6 +5,7 @@ import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
 import Groups from "./pages/Groups";
 import Courses from "./pages/Courses";
+import Clients from "./pages/Clients";
 import Personnel from "./pages/Personnel";
 import Finance from "./pages/Finance";
 import Reports from "./pages/Reports";
@@ -24,6 +25,7 @@ function App() {
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="leads" element={<Leads />} />
+          <Route path="clients" element={<Clients />} />
           <Route path="groups" element={<Groups />} />
           <Route path="courses" element={<Courses />} />
           <Route path="personnel" element={<Personnel />} />

@@ -1,203 +1,70 @@
-"use client";
-
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import StudentService from "../services/students.service";
+import { Select, SelectItem } from "../components/ui/select";
 import LoadingSpinner from "./features/loading";
+import StudentService from "../services/students.service";
 
-interface StudentFormData {
-  firstName: string;
-  lastName: string;
+interface AddStudentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onStudentAdded: (student: any) => void;
+  studentId?: string | null;
+  initialData?: any | null;
+}
+
+interface FormData {
+  name: string;
   phoneNumber: string;
   birthYear: string;
   birthMonth: string;
   birthDay: string;
   actionType: string;
   groupId?: string;
-  [key: string]: any;
+  branch: string;
+  subject: string;
+  level: string;
+  teacher: string;
+  teacherPercentage: string;
+  days: string;
+  financeType: string;
+  startDate: string;
+  startTimeId: string;
+  roomId: string;
+  calculationType: string;
 }
 
-interface AddStudentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: (data: any) => void;
-  studentId?: number | null; // If provided, we're in update mode
-  initialData?: any | null;
-}
-
-export function AddStudentDialog({ open, onOpenChange, onSuccess, studentId = null, initialData = null }: AddStudentDialogProps) {
-  const [formData, setFormData] = useState<StudentFormData>({
-    firstName: "",
-    lastName: "",
-    phoneNumber: "+998",
+export function AddStudentDialog({ open, onOpenChange, onStudentAdded, studentId = null, initialData = null }: AddStudentDialogProps) {
+  const [formData, setFormData] = useState<FormData>({
+    name: "",
+    phoneNumber: "",
     birthYear: "",
     birthMonth: "",
     birthDay: "",
-    actionType: "individual", // individual or group
+    actionType: "trial",
+    branch: "",
+    subject: "",
+    level: "",
+    teacher: "",
+    teacherPercentage: "",
+    days: "",
+    financeType: "",
+    startDate: "",
+    startTimeId: "",
+    roomId: "",
+    calculationType: "",
   });
-  const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isUpdateMode = !!studentId;
-
-  // Parse date string to year, month, day
-  const parseDateString = (dateString: string | null | undefined) => {
-    if (!dateString) return { year: "", month: "", day: "" };
-
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return { year: "", month: "", day: "" };
-
-      return {
-        year: date.getFullYear().toString(),
-        month: (date.getMonth() + 1).toString().padStart(2, "0"),
-        day: date.getDate().toString().padStart(2, "0"),
-      };
-    } catch (e) {
-      return { year: "", month: "", day: "" };
-    }
-  };
-
-  // Fetch student data if in update mode
-  useEffect(() => {
-    if (open && isUpdateMode && studentId && !initialData) {
-      const fetchStudentData = async () => {
-        try {
-          setFetchingData(true);
-          const studentData = await StudentService.getStudent(studentId.toString());
-
-          const { year, month, day } = parseDateString(studentData.birthday);
-
-          setFormData({
-            firstName: studentData.first_name || "",
-            lastName: studentData.last_name || "",
-            phoneNumber: studentData.phone_number || "+998",
-            birthYear: year,
-            birthMonth: month,
-            birthDay: day,
-            actionType: studentData.group_id ? "group" : "individual",
-            groupId: studentData.group_id?.toString() || "",
-          });
-        } catch (err) {
-          console.error("Error fetching student data:", err);
-          setError("Talaba ma'lumotlarini yuklashda xatolik yuz berdi");
-        } finally {
-          setFetchingData(false);
-        }
-      };
-
-      fetchStudentData();
-    } else if (initialData) {
-      // Use provided initial data if available
-      const { year, month, day } = parseDateString(initialData.birthday);
-
-      setFormData({
-        ...initialData,
-        birthYear: year,
-        birthMonth: month,
-        birthDay: day,
-      });
-    }
-  }, [open, studentId, isUpdateMode, initialData]);
-
-  // Reset form when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setError(null);
-      if (!isUpdateMode) {
-        setFormData({
-          firstName: "",
-          lastName: "",
-          phoneNumber: "+998",
-          birthYear: "",
-          birthMonth: "",
-          birthDay: "",
-          actionType: "individual",
-        });
-      }
-    }
-  }, [open, isUpdateMode]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleRadioChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, actionType: value }));
-  };
-
-  // Format date as YYYY-MM-DD
-  const formatBirthday = () => {
-    if (!formData.birthYear || !formData.birthMonth || !formData.birthDay) return "";
-    return `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`;
-  };
-
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Validate form
-      if (!formData.firstName.trim()) {
-        setError("Ism kiritilishi shart");
-        return;
-      }
-      if (!formData.lastName.trim()) {
-        setError("Familiya kiritilishi shart");
-        return;
-      }
-      if (!formData.phoneNumber.trim() || formData.phoneNumber === "+998") {
-        setError("Telefon raqam kiritilishi shart");
-        return;
-      }
-      if (!formData.birthYear || !formData.birthMonth || !formData.birthDay) {
-        setError("Tug'ilgan sana to'liq tanlanishi kerak");
-        return;
-      }
-
-      // Prepare data for API
-      const birthday = formatBirthday();
-
-      const studentData = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone_number: formData.phoneNumber,
-        birthday: birthday,
-        group_id: formData.actionType === "group" ? formData.groupId : null,
-      };
-
-      let result;
-      if (isUpdateMode && studentId) {
-        // Update existing student
-        result = await StudentService.updateStudent(studentId.toString(), studentData);
-      } else {
-        // Create new student
-        result = await StudentService.createStudent(studentData);
-      }
-
-      // Close dialog and call success callback
-      onOpenChange(false);
-      if (onSuccess) {
-        onSuccess(result);
-      }
-    } catch (err: any) {
-      console.error("Error saving student:", err);
-      setError(err.response?.data?.detail || "Talaba ma'lumotlarini saqlashda xatolik yuz berdi");
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Generate years from 1950 to current year
@@ -222,18 +89,77 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, studentId = nu
     { id: "3", name: "Group 47 (Business English)" },
   ];
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    // Validate form
+    if (!formData.name.trim()) {
+      setError("Name is required");
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.phoneNumber.trim()) {
+      setError("Telefon raqam kiritilishi shart");
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.birthYear || !formData.birthMonth || !formData.birthDay) {
+      setError("To'liq tug'ilgan sana kiritilishi shart");
+      setIsSubmitting(false);
+      return;
+    }
+    if (formData.actionType === "group" && !formData.groupId) {
+      setError("Guruh tanlanishi shart");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const birthday = `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`;
+      const studentData = {
+        first_month_discount: 0,
+        first_name: formData.name.split(" ")[0],
+        last_name: formData.name.split(" ").slice(1).join(" "),
+        phone_number_1: formData.phoneNumber,
+        monthly_discount: 0,
+        birthday,
+        group_id: formData.actionType === "group" ? formData.groupId : null,
+        branch: Number.parseInt(formData.branch),
+        group_type: formData.actionType,
+        subject: Number.parseInt(formData.subject),
+        level: Number.parseInt(formData.level),
+        teacher: Number.parseInt(formData.teacher),
+        teacher_percentage: Number.parseFloat(formData.teacherPercentage),
+        days: formData.days,
+        finance_type: formData.financeType,
+        start_date: formData.startDate,
+        start_time_id: Number.parseInt(formData.startTimeId),
+        room_id: Number.parseInt(formData.roomId),
+        discount_first_month: false,
+        calculation_type: Number.parseInt(formData.calculationType),
+      };
+
+      console.log(studentData);
+
+      const createdStudent = await StudentService.createStudent(studentData);
+      onStudentAdded(createdStudent);
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error("Error creating student:", err.response?.data);
+      setError(err.response?.data?.detail || "Failed to create student");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog className="bg-white" open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] p-0 gap-0">
-        <DialogHeader className="p-6 pb-2">
-          <div className="flex justify-between items-start">
-            <div>
-              <DialogTitle className="text-2xl font-semibold text-[#2F3C7E]">{isUpdateMode ? "Update Student" : "Add new Student"}</DialogTitle>
-              <DialogDescription className="text-base text-gray-500 mt-1">
-                {isUpdateMode ? "Update student information" : "Add or move selected students to a new group"}
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>{studentId ? "Edit Student" : "Add Student"}</DialogTitle>
+          <DialogDescription>Fill in the information to {studentId ? "update" : "create"} a new student.</DialogDescription>
         </DialogHeader>
 
         {fetchingData ? (
@@ -241,167 +167,231 @@ export function AddStudentDialog({ open, onOpenChange, onSuccess, studentId = nu
             <LoadingSpinner />
           </div>
         ) : (
-          <div className="p-6 pt-4">
-            {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="p-6 pt-4">
+              {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
 
-            <div className="grid gap-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-[#2F3C7E] text-sm font-medium">
-                    First name<span className="text-red-500 ml-0.5">*</span>
-                  </Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    className="rounded-lg border-gray-200"
-                    placeholder="John"
-                  />
+              <div className="grid gap-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-[#2F3C7E] text-sm font-medium">
+                      Full Name<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
+                    <Input id="name" name="name" placeholder="Enter student's name" required value={formData.name} onChange={handleChange} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber" className="text-[#2F3C7E] text-sm font-medium">
+                      Phone Number<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
+                    <Input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      placeholder="Enter phone number"
+                      required
+                      type="tel"
+                      value={formData.phoneNumber}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-[#2F3C7E] text-sm font-medium">
-                    Last name<span className="text-red-500 ml-0.5">*</span>
-                  </Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    className="rounded-lg border-gray-200"
-                    placeholder="Anderson"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber" className="text-[#2F3C7E] text-sm font-medium">
-                    Phone number<span className="text-red-500 ml-0.5">*</span>
-                  </Label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                    className="rounded-lg border-gray-200"
-                    placeholder="+998"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-[#2F3C7E] text-sm font-medium">
-                    Birthday<span className="text-red-500 ml-0.5">*</span>
-                  </Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {/* Year selector */}
-                    <Select onVolumeChange={(value: any) => handleSelectChange("birthYear", value)} value={formData.birthYear}>
-                      <SelectTrigger className="rounded-lg border-gray-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[200px]">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[#2F3C7E] text-sm font-medium">
+                      Birthday<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Year selector */}
+                      <Select name="birthYear" value={formData.birthYear} onChange={handleChange}>
+                        <SelectItem value="" disabled>
+                          Year
+                        </SelectItem>
                         {years.map((year) => (
                           <SelectItem key={year} value={year}>
                             {year}
                           </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </Select>
 
-                    {/* Month selector */}
-                    <Select onVolumeChange={(value: any) => handleSelectChange("birthMonth", value)} value={formData.birthMonth}>
-                      <SelectTrigger className="rounded-lg border-gray-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
+                      {/* Month selector */}
+                      <Select name="birthMonth" value={formData.birthMonth} onChange={handleChange}>
+                        <SelectItem value="" disabled>
+                          Month
+                        </SelectItem>
                         {months.map((month) => (
                           <SelectItem key={month.value} value={month.value}>
                             {month.label}
                           </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </Select>
 
-                    {/* Day selector */}
-                    <Select onVolumeChange={(value: any) => handleSelectChange("birthDay", value)} value={formData.birthDay}>
-                      <SelectTrigger className="rounded-lg border-gray-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
+                      {/* Day selector */}
+                      <Select name="birthDay" value={formData.birthDay} onChange={handleChange}>
+                        <SelectItem value="" disabled>
+                          Day
+                        </SelectItem>
                         {days.map((day) => (
                           <SelectItem key={day.value} value={day.value}>
                             {day.label}
                           </SelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                <Label className="text-[#2F3C7E] text-sm font-medium">Select type of action</Label>
-                <RadioGroup value={formData.actionType} onValueChange={handleRadioChange} className="flex space-x-12">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="individual" id="individual" />
-                    <Label htmlFor="individual" className="font-normal">
-                      Individual
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="group" id="group" />
-                    <Label htmlFor="group" className="font-normal">
-                      Add group
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {formData.actionType === "group" && (
                 <div className="space-y-2">
-                  <Label htmlFor="groupId" className="text-[#2F3C7E] text-sm font-medium">
-                    Group<span className="text-red-500 ml-0.5">*</span>
+                  <Label className="text-[#2F3C7E] text-sm font-medium">
+                    Action Type<span className="text-red-500 ml-0.5">*</span>
                   </Label>
-                  <Select onVolumeChange={(value: any) => handleSelectChange("groupId", value)} value={formData.groupId || ""}>
-                    <SelectTrigger className="rounded-lg border-gray-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
+                  <RadioGroup value={formData.actionType} onValueChange={(value) => setFormData((prev) => ({ ...prev, actionType: value }))}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="trial" id="trial" />
+                      <Label htmlFor="trial">Trial</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="group" id="group" />
+                      <Label htmlFor="group">Group</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {formData.actionType === "group" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="groupId" className="text-[#2F3C7E] text-sm font-medium">
+                      Group<span className="text-red-500 ml-0.5">*</span>
+                    </Label>
+                    <Select name="groupId" value={formData.groupId || ""} onChange={handleChange}>
+                      <SelectItem value="" disabled>
+                        Select a group
+                      </SelectItem>
                       {groups.map((group) => (
                         <SelectItem key={group.id} value={group.id}>
                           {group.name}
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+                    </Select>
+                  </div>
+                )}
 
-              <div className="flex justify-end space-x-4 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="rounded-lg px-8 text-gray-600 border-gray-200"
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmit} className="rounded-lg px-8 bg-[#2F3C7E] hover:bg-[#2F3C7E]/90" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <LoadingSpinner />
-                      {isUpdateMode ? "Updating..." : "Creating..."}
-                    </>
-                  ) : isUpdateMode ? (
-                    "Update"
-                  ) : (
-                    "Next"
-                  )}
-                </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="branch" className="text-[#2F3C7E] text-sm font-medium">
+                      Branch
+                    </Label>
+                    <Input id="branch" name="branch" placeholder="Enter branch" value={formData.branch} onChange={handleChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="subject" className="text-[#2F3C7E] text-sm font-medium">
+                      Subject
+                    </Label>
+                    <Input id="subject" name="subject" placeholder="Enter subject" value={formData.subject} onChange={handleChange} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="level" className="text-[#2F3C7E] text-sm font-medium">
+                      Level
+                    </Label>
+                    <Input id="level" name="level" placeholder="Enter level" value={formData.level} onChange={handleChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="teacher" className="text-[#2F3C7E] text-sm font-medium">
+                      Teacher
+                    </Label>
+                    <Input id="teacher" name="teacher" placeholder="Enter teacher" value={formData.teacher} onChange={handleChange} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="teacherPercentage" className="text-[#2F3C7E] text-sm font-medium">
+                      Teacher Percentage
+                    </Label>
+                    <Input
+                      id="teacherPercentage"
+                      name="teacherPercentage"
+                      placeholder="Enter teacher percentage"
+                      value={formData.teacherPercentage}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="days" className="text-[#2F3C7E] text-sm font-medium">
+                      Days
+                    </Label>
+                    <Input id="days" name="days" placeholder="Enter days" value={formData.days} onChange={handleChange} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="financeType" className="text-[#2F3C7E] text-sm font-medium">
+                      Finance Type
+                    </Label>
+                    <Input
+                      id="financeType"
+                      name="financeType"
+                      placeholder="Enter finance type"
+                      value={formData.financeType}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate" className="text-[#2F3C7E] text-sm font-medium">
+                      Start Date
+                    </Label>
+                    <Input id="startDate" name="startDate" type="date" value={formData.startDate} onChange={handleChange} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startTimeId" className="text-[#2F3C7E] text-sm font-medium">
+                      Start Time ID
+                    </Label>
+                    <Input
+                      id="startTimeId"
+                      name="startTimeId"
+                      placeholder="Enter start time ID"
+                      value={formData.startTimeId}
+                      onChange={handleChange}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="roomId" className="text-[#2F3C7E] text-sm font-medium">
+                      Room ID
+                    </Label>
+                    <Input id="roomId" name="roomId" placeholder="Enter room ID" value={formData.roomId} onChange={handleChange} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="calculationType" className="text-[#2F3C7E] text-sm font-medium">
+                    Calculation Type
+                  </Label>
+                  <Input
+                    id="calculationType"
+                    name="calculationType"
+                    placeholder="Enter calculation type"
+                    value={formData.calculationType}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <LoadingSpinner /> : studentId ? "Update Student" : "Add Student"}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>

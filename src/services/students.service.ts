@@ -2,8 +2,8 @@ import api from "./api";
 import { Student } from "../types";
 
 const StudentsService = {
-  async getStudents(): Promise<Student[]> {
-    const response = await api.get<Student[]>("/students");
+  async getStudents(p: { page: number; page_size: number; search: string }): Promise<Student[]> {
+    const response = await api.get<Student[]>("/api/v1/student/list/");
     return response.data;
   },
 
@@ -13,7 +13,7 @@ const StudentsService = {
   },
 
   async createStudent(studentData: Partial<Student>): Promise<Student> {
-    const response = await api.post<Student>("/students", studentData);
+    const response = await api.post<Student>("/api/v1/student/create/", studentData);
     return response.data;
   },
 

@@ -12,18 +12,21 @@ import { ErrorDisplay } from "../components/ui/error-display";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { Pagination } from "../components/ui/pagination";
 import LoadingSpinner from "../components/features/loading";
+import type { Student } from "../types";
 
 export default function ClientsPage() {
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const pageSize = 10;
+
+  console.log(students);
 
   const fetchStudents = async () => {
     try {
@@ -36,13 +39,14 @@ export default function ClientsPage() {
         search: searchTerm,
       });
 
-      console.log(response);
+      console.log(response.results);
 
-      setStudents(response.results);
-      setTotalPages(Math.ceil(response.count / pageSize));
-    } catch (err) {
+      setStudents(Array.isArray(response.results) ? response.results : []);
+      setTotalPages(Math.ceil((Array.isArray(response.results) ? response.results.length : 0) / pageSize));
+    } catch (err: any) {
       console.error("Students fetch error:", err);
       setError(err.response?.data?.detail || "Talabalarni yuklashda xatolik yuz berdi");
+      setStudents([]); // Reset to empty array on error
     } finally {
       setLoading(false);
     }
@@ -59,7 +63,7 @@ export default function ClientsPage() {
     setSelectedStudentId(null);
   };
 
-  const toggleStudentSelection = (id) => {
+  const toggleStudentSelection = (id: string) => {
     setSelectedStudents((prev) => (prev.includes(id) ? prev.filter((studentId) => studentId !== id) : [...prev, id]));
   };
 
@@ -71,12 +75,12 @@ export default function ClientsPage() {
     }
   };
 
-  const handleEditStudent = (studentId) => {
-    setSelectedStudentId(studentId);
+  const handleEditStudent = (studentId: string) => {
+    setSelectedStudentId(Number(studentId));
     setIsDialogOpen(true);
   };
 
-  const handleDeleteStudent = async (studentId) => {
+  const handleDeleteStudent = async (studentId: string) => {
     if (window.confirm("Haqiqatan ham bu talabani o'chirmoqchimisiz?")) {
       try {
         await StudentService.deleteStudent(studentId.toString());
@@ -88,7 +92,7 @@ export default function ClientsPage() {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status: any) => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-500">Active</Badge>;
@@ -169,61 +173,69 @@ export default function ClientsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {students.map((student, index) => (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedStudents.includes(student.id.toString())}
-                        onChange={() => toggleStudentSelection(student.id.toString())}
-                      />
-                    </TableCell>
-                    <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
-                    <TableCell>{student.id}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div>{`${student.full_name}`}</div>
-                        <div className="text-xs text-gray-500">
-                          {student.birthday ? new Date(student.birthday).toLocaleDateString("ru-RU") : "Not available"}
+                {Array.isArray(students) && students.length > 0 ? (
+                  students.map((student, index) => (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedStudents.includes(student.id.toString())}
+                          onChange={() => toggleStudentSelection(student.id.toString())}
+                        />
+                      </TableCell>
+                      <TableCell>{(currentPage - 1) * pageSize + index + 1}</TableCell>
+                      <TableCell>{student.id}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div>{`${student.full_name}`}</div>
+                          <div className="text-xs text-gray-500">
+                            {student.birthday ? new Date(student.birthday).toLocaleDateString("ru-RU") : "Not available"}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <span className="text-yellow-500 mr-1">★</span>
-                        {student.points || 0} points
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div>{student.group_name || "Individual"}</div>
-                        <div className="text-xs text-gray-500">{student.course_name || "General English"}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(student.status)}</TableCell>
-                    <TableCell>{student.study_date || "Not available"}</TableCell>
-                    <TableCell>{student.phone_number}</TableCell>
-                    <TableCell>{student.balance || "0 so'm"}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditStudent(student?.id)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            <span>Edit</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDeleteStudent(student?.id)} className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="text-yellow-500 mr-1">★</span>
+                          {student.points || 0} points
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div>{student.group_name || "Individual"}</div>
+                          <div className="text-xs text-gray-500">{student.course_name || "General English"}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(student.status)}</TableCell>
+                      <TableCell>{student.study_date || "Not available"}</TableCell>
+                      <TableCell>{student.phone_number}</TableCell>
+                      <TableCell>{student.balance || "0 so'm"}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditStudent(student?.id)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteStudent(student?.id)} className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Delete</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-4">
+                      No students found
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
@@ -234,7 +246,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <AddStudentDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onSuccess={handleStudentSaved} studentId={selectedStudentId} />
+      <AddStudentDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onSuccess={handleStudentSaved} studentId={selectedStudentId?.toString()} />
     </div>
   );
 }
